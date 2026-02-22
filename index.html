@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>最強・英会話100フレーズ学習帳</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --success: #2ecc71;
+            --bg: #f5f7fa;
+            --text: #2c3e50;
+        }
+        body { font-family: 'Helvetica Neue', Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 0; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        header { background: white; padding: 20px; border-bottom: 2px solid #eee; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        h1 { margin: 0 0 15px 0; font-size: 1.5rem; }
+        
+        /* モード切替スイッチ */
+        .mode-switch { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; }
+        button { padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-main { background: var(--primary); color: white; }
+        .btn-sub { background: #bdc3c7; color: white; }
+        .btn-main:hover, .btn-sub:hover { opacity: 0.8; }
+        .active { background: #2c3e50 !important; }
+
+        /* リスト表示 */
+        #list-view { display: block; }
+        .phrase-card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 15px; }
+        .phrase-info { flex-grow: 1; }
+        .en { font-size: 1.1rem; font-weight: bold; color: var(--primary); display: block; margin-bottom: 5px; }
+        .ja { font-size: 0.9rem; color: #7f8c8d; }
+        .ex { font-size: 0.8rem; color: #95a5a6; font-style: italic; margin-top: 5px; display: block; }
+
+        /* クイズ表示 */
+        #quiz-view { display: none; text-align: center; background: white; padding: 40px 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 20px; }
+        .quiz-q { font-size: 1.4rem; margin-bottom: 20px; font-weight: bold; }
+        .quiz-a { font-size: 1.6rem; color: var(--primary); font-weight: bold; min-height: 2rem; margin-bottom: 30px; display: none; }
+        .quiz-controls { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
+
+        /* 目隠し機能用 */
+        .hide-en .en { background: #ccc; color: transparent; cursor: pointer; }
+        .hide-en .en:hover { background: transparent; color: var(--primary); }
+        .hide-ja .ja { background: #ccc; color: transparent; cursor: pointer; }
+        .hide-ja .ja:hover { background: transparent; color: #7f8c8d; }
+
+        /* 音声ボタン */
+        .btn-speak { background: var(--success); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+
+        @media (max-width: 600px) {
+            .container { padding: 10px; }
+            h1 { font-size: 1.2rem; }
+            .phrase-card { padding: 10px; }
+        }
+    </style>
+</head>
+<body class="">
+
+<header>
+    <div class="container">
+        <h1>英会話100学習ツール</h1>
+        <div class="mode-switch">
+            <button id="btn-list" class="btn-main active" onclick="switchMode('list')">リスト表示</button>
+            <button id="btn-quiz" class="btn-main" onclick="switchMode('quiz')">クイズ形式</button>
+        </div>
+        <div id="list-controls" class="mode-switch">
+            <button class="btn-sub" onclick="toggleHide('hide-en')">英語を隠す</button>
+            <button class="btn-sub" onclick="toggleHide('hide-ja')">日本語を隠す</button>
+        </div>
+    </div>
+</header>
+
+<div class="container">
+    <div id="list-view"></div>
+
+    <div id="quiz-view">
+        <div id="quiz-progress" style="margin-bottom: 10px; color: #7f8c8d;"></div>
+        <div class="quiz-q" id="q-text">問題が出るよ</div>
+        <div class="quiz-a" id="a-text">答え</div>
+        <div class="quiz-controls">
+            <button class="btn-sub" onclick="showAnswer()">答えを見る</button>
+            <button class="btn-main" onclick="nextQuiz()">次の問題</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const phrases = [
+        {en: "Hello / Hi", ja: "こんにちは", ex: "Hi there! How are you?"},
+        {en: "How are you?", ja: "元気ですか？", ex: "How are you doing today?"},
+        {en: "I'm good, thanks.", ja: "元気です、ありがとう。", ex: "I'm good, thanks. And you?"},
+        {en: "How's it going?", ja: "調子はどう？", ex: "Hey, how's it going?"},
+        {en: "Long time no see.", ja: "お久しぶりです。", ex: "Long time no see! How have you been?"},
+        {en: "Nice to meet you.", ja: "はじめまして。", ex: "Nice to meet you, I'm Ken."},
+        {en: "Good morning.", ja: "おはようございます。", ex: "Good morning, everyone."},
+        {en: "Good afternoon.", ja: "こんにちは（午後）。", ex: "Good afternoon, may I help you?"},
+        {en: "Good evening.", ja: "こんばんは。", ex: "Good evening. It's a beautiful night."},
+        {en: "What's up?", ja: "最近どう？（やあ）", ex: "What's up? Anything new?"},
+        {en: "Please.", ja: "お願いします。", ex: "Coffee, please."},
+        {en: "Thank you.", ja: "ありがとう。", ex: "Thank you for your help."},
+        {en: "You're welcome.", ja: "どういたしまして。", ex: "No problem, you're welcome."},
+        {en: "Excuse me.", ja: "すみません（呼びかけ）。", ex: "Excuse me, where is the station?"},
+        {en: "I'm sorry.", ja: "ごめんなさい。", ex: "I'm sorry I'm late."},
+        {en: "No problem.", ja: "問題ありません。", ex: "Don't worry, no problem."},
+        {en: "That's okay.", ja: "大丈夫ですよ。", ex: "It's fine, that's okay."},
+        {en: "Yes, please.", ja: "はい、お願いします。", ex: "Would you like some water? - Yes, please."},
+        {en: "No, thank you.", ja: "いいえ、結構です。", ex: "Do you need help? - No, thank you."},
+        {en: "Maybe.", ja: "たぶん。", ex: "Will it rain? - Maybe."},
+        {en: "I understand.", ja: "理解しました。", ex: "Okay, I understand now."},
+        {en: "I don't know.", ja: "知りません / わかりません。", ex: "I don't know the answer."},
+        {en: "I'm not sure.", ja: "よくわかりません。", ex: "I'm not sure if he's here."},
+        {en: "Could you repeat that?", ja: "もう一度言っていただけますか？", ex: "Sorry, could you repeat that?"},
+        {en: "What does this mean?", ja: "これはどういう意味ですか？", ex: "What does this word mean?"},
+        {en: "How do you say this?", ja: "これは何と言いますか？", ex: "How do you say 'ringo' in English?"},
+        {en: "Speak slowly, please.", ja: "ゆっくり話してください。", ex: "Could you speak slowly, please?"},
+        {en: "I see.", ja: "なるほど。", ex: "I see. That makes sense."},
+        {en: "Exactly.", ja: "その通りです。", ex: "Exactly! You are right."},
+        {en: "Can you help me?", ja: "手伝ってくれますか？", ex: "Can you help me with this bag?"},
+        {en: "I think so.", ja: "そう思います。", ex: "Is it going to rain? - I think so."},
+        {en: "I don't think so.", ja: "そうは思いません。", ex: "I don't think so. It's wrong."},
+        {en: "I agree.", ja: "賛成です。", ex: "I agree with your opinion."},
+        {en: "I'm happy.", ja: "嬉しいです。", ex: "I'm so happy to see you."},
+        {en: "I'm tired.", ja: "疲れました。", ex: "I'm tired after work."},
+        {en: "I'm hungry.", ja: "お腹が空きました。", ex: "I'm hungry. Let's eat."},
+        {en: "I'm thirsty.", ja: "喉が渇きました。", ex: "Can I have some water? I'm thirsty."},
+        {en: "It's great!", ja: "最高です！", ex: "Your new car is great!"},
+        {en: "That's interesting.", ja: "それは面白いですね。", ex: "Your story is very interesting."},
+        {en: "I'm looking forward to it.", ja: "楽しみにしています。", ex: "I'm looking forward to the trip."},
+        {en: "Where is the bathroom?", ja: "トイレはどこですか？", ex: "Excuse me, where is the bathroom?"},
+        {en: "What time is it?", ja: "何時ですか？", ex: "Do you have the time? What time is it?"},
+        {en: "How much is this?", ja: "これはいくらですか？", ex: "I like this shirt. How much is this?"},
+        {en: "Can I have this?", ja: "これをいただけますか？", ex: "Can I have this cake, please?"},
+        {en: "Check, please.", ja: "お会計お願いします。", ex: "We are done. Check, please."},
+        {en: "Just a moment, please.", ja: "少々お待ちください。", ex: "Just a moment, please. I'm coming."},
+        {en: "What are you doing?", ja: "何をしているの？", ex: "Hey, what are you doing now?"},
+        {en: "Where are you from?", ja: "出身はどちらですか？", ex: "I'm from Japan. Where are you from?"},
+        {en: "What do you do?", ja: "お仕事は何ですか？", ex: "What do you do for a living?"},
+        {en: "Do you like it?", ja: "それは好きですか？", ex: "I bought this. Do you like it?"},
+        {en: "I'm from Japan.", ja: "日本出身です。", ex: "I'm from Japan, but I live in NY."},
+        {en: "I live in Tokyo.", ja: "東京に住んでいます。", ex: "Currently, I live in Tokyo."},
+        {en: "My name is...", ja: "私の名前は...です。", ex: "My name is Taro. Call me T."},
+        {en: "I like traveling.", ja: "旅行が好きです。", ex: "I like traveling around Asia."},
+        {en: "My hobby is...", ja: "趣味は...です。", ex: "My hobby is playing soccer."},
+        {en: "I'm a student.", ja: "学生です。", ex: "I'm a college student in Osaka."},
+        {en: "I work for a company.", ja: "会社員です。", ex: "I work for a tech company."},
+        {en: "I have a brother.", ja: "兄弟がいます。", ex: "I have a brother and a sister."},
+        {en: "I'm learning English.", ja: "英語を勉強中です。", ex: "I'm learning English using an app."},
+        {en: "Nice talking to you.", ja: "お話しできてよかったです。", ex: "Thanks for today. Nice talking to you."},
+        {en: "Goodbye.", ja: "さようなら。", ex: "Goodbye. Have a safe flight."},
+        {en: "See you later.", ja: "またあとで。", ex: "Okay, see you later!"},
+        {en: "See you tomorrow.", ja: "また明日。", ex: "Good night. See you tomorrow."},
+        {en: "Take care.", ja: "気をつけて。", ex: "Bye! Take care."},
+        {en: "Have a nice day.", ja: "良い一日を。", ex: "Thanks, you too. Have a nice day."},
+        {en: "Good night.", ja: "おやすみなさい。", ex: "Sleep well. Good night."},
+        {en: "Keep in touch.", ja: "連絡を取り合いましょう。", ex: "Let's keep in touch via email."},
+        {en: "I have to go.", ja: "行かなくちゃ。", ex: "It's late. I have to go."},
+        {en: "Bye-bye.", ja: "バイバイ。", ex: "Bye-bye! See you!"},
+        {en: "Have a good one.", ja: "じゃあね。", ex: "See ya. Have a good one."},
+        {en: "It's hot today.", ja: "今日は暑いですね。", ex: "It's very hot today, isn't it?"},
+        {en: "It's cold today.", ja: "今日は寒いですね。", ex: "It's freezing! It's cold today."},
+        {en: "It's raining.", ja: "雨が降っています。", ex: "Look outside. It's raining."},
+        {en: "It's beautiful.", ja: "綺麗ですね。", ex: "The sunset is beautiful."},
+        {en: "It's noisy here.", ja: "ここはうるさいですね。", ex: "Let's go outside. It's noisy here."},
+        {en: "I'm busy.", ja: "忙しいです。", ex: "I'm busy with my homework."},
+        {en: "I'm free.", ja: "暇です / 空いています。", ex: "I'm free this Sunday."},
+        {en: "Are you ready?", ja: "準備はいいですか？", ex: "Time to go. Are you ready?"},
+        {en: "Let's go.", ja: "行きましょう。", ex: "The bus is here. Let's go."},
+        {en: "Wait for me.", ja: "待って。", ex: "Don't go yet! Wait for me."},
+        {en: "Congratulations!", ja: "おめでとう！", ex: "You passed the exam? Congratulations!"},
+        {en: "Happy Birthday!", ja: "誕生日おめでとう！", ex: "Happy Birthday! Have a great year!"},
+        {en: "Good luck!", ja: "幸運を！", ex: "Good luck with your interview."},
+        {en: "You can do it!", ja: "あなたならできるよ！", ex: "Don't give up. You can do it!"},
+        {en: "Don't worry.", ja: "心配しないで。", ex: "Don't worry. Everything will be fine."},
+        {en: "Well done.", ja: "よくやったね。", ex: "Great work. Well done."},
+        {en: "Cheer up!", ja: "元気出して！", ex: "It's not the end of the world. Cheer up!"},
+        {en: "That's too bad.", ja: "それは残念ですね。", ex: "You lost your wallet? That's too bad."},
+        {en: "Take it easy.", ja: "気楽にいこう。", ex: "Don't work too hard. Take it easy."},
+        {en: "Great job!", ja: "よくできました！", ex: "You did a great job today."},
+        {en: "Sounds good.", ja: "いいですね。", ex: "Let's meet at 6. - Sounds good."},
+        {en: "Why not?", ja: "もちろん（なぜダメなの？）。", ex: "Want to join us? - Why not?"},
+        {en: "Of course.", ja: "もちろんです。", ex: "Can I borrow this? - Of course."},
+        {en: "I'm kidding.", ja: "冗談だよ。", ex: "Don't take it seriously. I'm kidding."},
+        {en: "Really?", ja: "本当に？", ex: "He is 50? Really?"},
+        {en: "Me too.", ja: "私もです。", ex: "I'm hungry. - Me too."},
+        {en: "I hope so.", ja: "そう願います。", ex: "Will it be sunny? - I hope so."},
+        {en: "It depends.", ja: "場合によります。", ex: "Are you coming? - It depends on the weather."},
+        {en: "Never mind.", ja: "気にしないで。", ex: "I forgot the book. - Never mind."},
+        {en: "What's new?", ja: "何か変わったことある？", ex: "Hey! What's new?"}
+    ];
+
+    let currentQuizIndex = 0;
+    let quizPool = [];
+
+    // 初期化
+    const listView = document.getElementById('list-view');
+    phrases.forEach((p, index) => {
+        const card = document.createElement('div');
+        card.className = 'phrase-card';
+        card.innerHTML = `
+            <div class="btn-speak" onclick="speak('${p.en.replace(/'/g, "\\'")}')">🔊</div>
+            <div class="phrase-info">
+                <span class="en">${index + 1}. ${p.en}</span>
+                <span class="ja">${p.ja}</span>
+                <span class="ex">Ex: ${p.ex}</span>
+            </div>
+        `;
+        listView.appendChild(card);
+    });
+
+    // モード切り替え
+    function switchMode(mode) {
+        document.getElementById('list-view').style.display = (mode === 'list') ? 'block' : 'none';
+        document.getElementById('quiz-view').style.display = (mode === 'quiz') ? 'block' : 'none';
+        document.getElementById('list-controls').style.display = (mode === 'list') ? 'flex' : 'none';
+        
+        document.getElementById('btn-list').classList.toggle('active', mode === 'list');
+        document.getElementById('btn-quiz').classList.toggle('active', mode === 'quiz');
+
+        if (mode === 'quiz') {
+            startQuiz();
+        }
+    }
+
+    // 目隠し
+    function toggleHide(className) {
+        document.body.classList.toggle(className);
+    }
+
+    // 音声読み上げ
+    function speak(text) {
+        window.speechSynthesis.cancel(); // 前の音声を止める
+        const uttr = new SpeechSynthesisUtterance(text);
+        uttr.lang = 'en-US';
+        uttr.rate = 0.9;
+        window.speechSynthesis.speak(uttr);
+    }
+
+    // クイズロジック
+    function startQuiz() {
+        quizPool = [...phrases].sort(() => Math.random() - 0.5);
+        currentQuizIndex = 0;
+        showQuestion();
+    }
+
+    function showQuestion() {
+        const q = quizPool[currentQuizIndex];
+        document.getElementById('quiz-progress').innerText = `${currentQuizIndex + 1} / ${quizPool.length}`;
+        document.getElementById('q-text').innerText = q.ja;
+        document.getElementById('a-text').innerText = q.en;
+        document.getElementById('a-text').style.display = 'none';
+    }
+
+    function showAnswer() {
+        const aField = document.getElementById('a-text');
+        aField.style.display = 'block';
+        speak(quizPool[currentQuizIndex].en);
+    }
+
+    function nextQuiz() {
+        currentQuizIndex++;
+        if (currentQuizIndex >= quizPool.length) {
+            alert("全問終了しました！最初に戻ります。");
+            startQuiz();
+        } else {
+            showQuestion();
+        }
+    }
+</script>
+
+</body>
+</html>
